@@ -47,30 +47,26 @@ jobs:
             set -e
             export APP_PATH="${{ secrets.UAT_AGENTIC_APP_PATH }}"
             export BRANCH="uat"
-
+            
             if [ -z "$APP_PATH" ]; then
               echo "Missing UAT Spring app path secret."
               exit 1
             fi
-
+            
             mkdir -p "$APP_PATH"
             cd "$APP_PATH"
-
+            
             if [ -d .git ]; then
               git fetch origin --prune
               git checkout "$BRANCH"
               git reset --hard "origin/$BRANCH"
               git clean -fd
             else
+              # Clean non-empty directory safely before cloning
+              rm -rf ./* ./.* 2>/dev/null || true
               git clone --branch "$BRANCH" --single-branch "https://x-access-token:${{ secrets.GH_PAT }}@github.com/inovora-hub-admin/consenza-agentic-enterprise.git" .
             fi
-
-            # Navigate into the subfolder where compose.yaml and Dockerfile reside
-            cd "$APP_PATH"
             
-            # Force source files to update timestamps so Docker invalidates its cache
-          
-
             # Rebuild, restart, and cleanly remove orphaned/duplicate containers
             docker compose build --no-cache agent-app
             docker compose up -d --build --remove-orphans agent-app
