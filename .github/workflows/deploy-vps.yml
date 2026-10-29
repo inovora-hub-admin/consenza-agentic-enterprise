@@ -25,11 +25,11 @@ jobs:
 
       - name: Build with Maven
         run: mvn clean install -DskipTests
-        working-directory: ./consenza
+        working-directory: ./agentic-app
 
 
   deploy-uat:
-    name: Deploy Spring Boot to UAT VPS
+    name: Deploy Anentic to UAT VPS
     needs: validate-maven
     if: github.ref == 'refs/heads/uat'
     runs-on: ubuntu-latest
