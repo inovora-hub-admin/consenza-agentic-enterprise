@@ -29,7 +29,7 @@ jobs:
 
 
   deploy-uat:
-    name: Deploy Anentic to UAT VPS
+    name: Deploy Agentic to UAT VPS
     needs: validate-maven
     if: github.ref == 'refs/heads/uat'
     runs-on: ubuntu-latest
@@ -68,13 +68,13 @@ jobs:
             fi
             
             # Rebuild, restart, and cleanly remove orphaned/duplicate containers
-            docker compose build --no-cache agent-app
-            docker compose up -d --build --remove-orphans agent-app
+            docker compose build --no-cache agentic-app
+            docker compose up -d --build --remove-orphans agentic-app
             docker image prune -f
 
 
   deploy-prod:
-    name: Deploy Spring Boot to PROD VPS
+    name: Deploy Agentic to PROD VPS
     needs: validate-maven
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
