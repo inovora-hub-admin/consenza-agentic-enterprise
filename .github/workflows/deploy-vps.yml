@@ -114,6 +114,6 @@ jobs:
             # Force source files to update timestamps so Docker invalidates its cache
     
             # Rebuild, restart, and cleanly remove orphaned/duplicate containers
-            docker compose build --no-cache agent-app
-            docker compose up -d --build --remove-orphans agent-app
+            docker compose build --no-cache agentic-app
+            docker compose up -d --build --remove-orphans agentic-app
             docker image prune -f
