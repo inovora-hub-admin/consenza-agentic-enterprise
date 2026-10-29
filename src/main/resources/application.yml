@@ -14,4 +14,4 @@ anthropic:
   base-url: https://api.anthropic.com
   default-model: claude-sonnet-5-5
 platform:
-  ui-origin: https://portal.consenza.africa/
+  ui-origin: https://portal.consenza.africa

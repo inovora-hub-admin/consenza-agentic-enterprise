@@ -7,7 +7,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
-    @Value("${platform.ui-origin}") private String uiOrigin;
+    @Value("${platform.ui-origin:https://portal.consenza.africa}") private String uiOrigin;
 
     @Override
     public void addCorsMappings(CorsRegistry r) {
