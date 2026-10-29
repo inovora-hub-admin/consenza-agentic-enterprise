@@ -4,6 +4,7 @@ server:
   shutdown: graceful
 
 
+#Database configuration for PostgreSQL
 spring:
   datasource:
     url: jdbc:postgresql://consenza-postgres:5432/agentic
