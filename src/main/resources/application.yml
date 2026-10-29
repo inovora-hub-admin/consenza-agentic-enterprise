@@ -1,3 +1,8 @@
+server:
+  port: 5445
+  address: 0.0.0.0
+  shutdown: graceful
+
 spring:
   datasource:
     url: jdbc:h2:mem:agentic;DB_CLOSE_DELAY=-1

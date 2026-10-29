@@ -1,5 +1,11 @@
+server:
+  port: 5445
+  address: 0.0.0.0
+  shutdown: graceful
+
+
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/agentic
-    username: agentic
-    password: agentic
+    url: jdbc:postgresql://consenza-postgres:5432/agentic
+    username: postgres
+    password: ${POSTGRES_PASSWORD:postgres_secure_pass}

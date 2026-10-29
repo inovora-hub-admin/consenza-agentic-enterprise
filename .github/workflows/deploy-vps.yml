@@ -1,0 +1,123 @@
+name: Deploy Spring Boot to VPS
+
+on:
+  push:
+    branches:
+      - uat
+      - main
+  workflow_dispatch:
+
+jobs:
+  validate-maven:
+    name: Validate Maven Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build with Maven
+        run: mvn clean install -DskipTests
+        working-directory: ./consenza
+
+
+  deploy-uat:
+    name: Deploy Spring Boot to UAT VPS
+    needs: validate-maven
+    if: github.ref == 'refs/heads/uat'
+    runs-on: ubuntu-latest
+    environment: uat
+
+    steps:
+      - name: Deploy over SSH to UAT Docker
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.UAT_VPS_HOST }}
+          username: ${{ secrets.UAT_VPS_USER }}
+          key: ${{ secrets.UAT_VPS_SSH_KEY }}
+          port: ${{ secrets.UAT_VPS_PORT || 22 }}
+          script: |
+            set -e
+            export APP_PATH="${{ secrets.UAT_AGENTIC_APP_PATH }}"
+            export BRANCH="uat"
+
+            if [ -z "$APP_PATH" ]; then
+              echo "Missing UAT Spring app path secret."
+              exit 1
+            fi
+
+            mkdir -p "$APP_PATH"
+            cd "$APP_PATH"
+
+            if [ -d .git ]; then
+              git fetch origin --prune
+              git checkout "$BRANCH"
+              git reset --hard "origin/$BRANCH"
+              git clean -fd
+            else
+              git clone --branch "$BRANCH" --single-branch "https://x-access-token:${{ secrets.GH_PAT }}@github.com/inovora-hub-admin/consenza-agentic-enterprise.git" .
+            fi
+
+            # Navigate into the subfolder where compose.yaml and Dockerfile reside
+            cd "$APP_PATH"
+            
+            # Force source files to update timestamps so Docker invalidates its cache
+          
+
+            # Rebuild, restart, and cleanly remove orphaned/duplicate containers
+            docker compose build --no-cache agent-app
+            docker compose up -d --build --remove-orphans agent-app
+            docker image prune -f
+
+
+  deploy-prod:
+    name: Deploy Spring Boot to PROD VPS
+    needs: validate-maven
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Deploy over SSH to PROD Docker
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_VPS_HOST }}
+          username: ${{ secrets.PROD_VPS_USER }}
+          key: ${{ secrets.PROD_VPS_SSH_KEY }}
+          port: ${{ secrets.PROD_VPS_PORT || 22 }}
+          script: |
+            set -e
+            export APP_PATH="${{ secrets.PROD_SPRING_APP_PATH }}"
+            export BRANCH="main"
+
+            if [ -z "$APP_PATH" ]; then
+              echo "Missing PROD Spring app path secret."
+              exit 1
+            fi
+
+            mkdir -p "$APP_PATH"
+            cd "$APP_PATH"
+
+            if [ -d .git ]; then
+              git fetch origin --prune
+              git checkout "$BRANCH"
+              git reset --hard "origin/$BRANCH"
+              git clean -fd
+            else
+              git clone --branch "$BRANCH" --single-branch "${{ github.server_url }}/${{ github.repository }}.git" .
+            fi
+            
+            cd "$APP_PATH"
+            # Force source files to update timestamps so Docker invalidates its cache
+    
+            # Rebuild, restart, and cleanly remove orphaned/duplicate containers
+            docker compose build --no-cache agent-app
+            docker compose up -d --build --remove-orphans agent-app
+            docker image prune -f
