@@ -13,7 +13,7 @@ import org.springframework.web.client.RestClient;
 import java.util.List;
 
 @Component
-@Profile("!mock")
+@Profile("!progres")
 public class AnthropicModelClient implements ModelClient {
     private final RestClient http;
     private final ObjectMapper om;
