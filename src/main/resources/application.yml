@@ -9,9 +9,35 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+
+# Model provider is chosen by profile (the database is chosen independently by "postgres"):
+#   default        -> Anthropic   (needs ANTHROPIC_API_KEY)
+#   openai         -> OpenAI or any OpenAI-compatible server (needs OPENAI_API_KEY, or a local base-url)
+#   mock           -> scripted offline model, no key
+# Example: SPRING_PROFILES_ACTIVE=postgres,openai
 anthropic:
-  api-key: ${ANTHROPIC_API_KEY}
+  api-key: ${ANTHROPIC_API_KEY:}
   base-url: https://api.anthropic.com
   default-model: claude-sonnet-5-5
+
+openai:
+  api-key: ${OPENAI_API_KEY:}
+  base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+  default-model: ${OPENAI_MODEL:gpt-4.1-mini}
+
 platform:
-  ui-origin: https://portal.consenza.africa
+  ui-origin: ${PLATFORM_UI_ORIGIN:https://portal.consenza.africa}
+  mcp:
+    # Expose this platform's tools to external agents/frameworks at POST /mcp. Off by default.
+    # Needs a token. Write tools stay hidden unless allow-writes is true.
+    server:
+      enabled: ${MCP_SERVER_ENABLED:false}
+      token: ${MCP_SERVER_TOKEN:}
+      allow-writes: false
+      allowed-origins: []
+    # Remote MCP servers whose tools are added to the tool gateway (e.g. your CBS / Kafka adapters):
+    # servers:
+    #   - name: cbs
+    #     url: http://cbs-mcp:8000/mcp
+    #     token: ${CBS_MCP_TOKEN:}
+    #     prefix: cbs

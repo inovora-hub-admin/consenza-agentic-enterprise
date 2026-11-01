@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
-/** Demo agents so the platform works end to end on first start. */
+/** Demo agents and a demo workflow definition so the platform works end to end on first start. */
 @Component
 public class SeedData implements CommandLineRunner {
     private final ConfigService svc;
@@ -23,6 +23,17 @@ public class SeedData implements CommandLineRunner {
                 "You are a credit analyst. Use credit-check to get the applicant's score and debt-to-income, "
                 + "then recommend approve, decline or refer with reasons. You only recommend; you never decide.",
                 "RECOMMEND", "credit-check");
+        seedWorkflow("onboard-and-credit-review", "Verify and onboard a customer, then assess a loan request.",
+                "kyc-agent", "credit-agent");
+    }
+
+    private void seedWorkflow(String name, String description, String... agents) {
+        if (!svc.versions("workflow", name).isEmpty()) return;
+        ObjectNode s = om.createObjectNode();
+        s.put("description", description);
+        var steps = s.putArray("steps");
+        for (String a : agents) steps.addObject().put("agent", a).put("task", "");
+        svc.publish("workflow", name, svc.createDraft("workflow", name, s).version());
     }
 
     private void seed(String name, String description, String instructions, String autonomy, String... tools) {

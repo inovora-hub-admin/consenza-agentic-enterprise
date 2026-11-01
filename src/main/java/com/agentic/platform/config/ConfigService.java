@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class ConfigService {
-    private static final Set<String> KINDS = Set.of("agent");
+    private static final Set<String> KINDS = Set.of("agent", "workflow");
     private static final Set<String> AUTONOMY = Set.of("READ_ONLY", "RECOMMEND", "ACT_WITH_APPROVAL", "AUTONOMOUS");
 
     private final ConfigRepository repo;
@@ -29,7 +29,7 @@ public class ConfigService {
         if (!KINDS.contains(kind)) throw bad("Unknown kind: " + kind);
         ObjectNode copy = spec.deepCopy();
         copy.put("name", name);
-        validateAgent(copy);
+        if ("agent".equals(kind)) validateAgent(copy); else validateWorkflow(copy);
         int next = repo.findByKindAndNameOrderByVersionDesc(kind, name).stream()
                 .findFirst().map(c -> c.version + 1).orElse(1);
         ConfigEntity e = new ConfigEntity();
@@ -43,6 +43,7 @@ public class ConfigService {
         List<ConfigEntity> all = repo.findByKindAndNameOrderByVersionDesc(kind, name);
         ConfigEntity target = all.stream().filter(c -> c.version == version).findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No such version"));
+        if ("workflow".equals(kind)) checkWorkflowAgents(toWorkflow(target));
         all.stream().filter(c -> "PUBLISHED".equals(c.status)).forEach(c -> c.status = "ARCHIVED");
         target.status = "PUBLISHED";
         repo.saveAll(all);
@@ -67,6 +68,35 @@ public class ConfigService {
         return repo.findByKindAndStatus("agent", "PUBLISHED").stream().map(this::toAgent).toList();
     }
 
+    public Optional<WorkflowSpec.Published> publishedWorkflow(String name) {
+        return repo.findFirstByKindAndNameAndStatus("workflow", name, "PUBLISHED")
+                .map(e -> new WorkflowSpec.Published(toWorkflow(e), e.version));
+    }
+
+    private void validateWorkflow(JsonNode spec) {
+        WorkflowSpec w = toWorkflow(spec);
+        if (w.steps().isEmpty()) throw bad("steps must not be empty");
+        for (WorkflowSpec.StepSpec s : w.steps())
+            if (s.agent() == null || s.agent().isBlank()) throw bad("every step needs an agent");
+    }
+
+    /** A workflow can only be published when every agent it uses is published. */
+    private void checkWorkflowAgents(WorkflowSpec w) {
+        for (WorkflowSpec.StepSpec s : w.steps())
+            if (publishedAgent(s.agent()).isEmpty()) throw bad("Agent not published: " + s.agent());
+    }
+
+    private WorkflowSpec toWorkflow(ConfigEntity e) {
+        try { return toWorkflow(om.readTree(e.spec)); }
+        catch (ResponseStatusException ex) { throw ex; }
+        catch (Exception ex) { throw new IllegalStateException(ex); }
+    }
+
+    private WorkflowSpec toWorkflow(JsonNode n) {
+        try { return om.treeToValue(n, WorkflowSpec.class); }
+        catch (Exception ex) { throw bad("Invalid workflow spec: " + ex.getMessage()); }
+    }
+
     private void validateAgent(JsonNode spec) {
         AgentSpec a = toAgent(spec);
         if (a.instructions() == null || a.instructions().isBlank()) throw bad("instructions is required");
@@ -74,7 +104,8 @@ public class ConfigService {
     }
 
     private AgentSpec toAgent(ConfigEntity e) {
-        try { return toAgent(om.readTree(e.spec)); } catch (Exception ex) { throw new IllegalStateException(ex); }
+        try { return toAgent(om.readTree(e.spec)); } catch (ResponseStatusException ex) { throw ex; }
+        catch (Exception ex) { throw new IllegalStateException(ex); }
     }
 
     private AgentSpec toAgent(JsonNode n) {

@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 
 /**
  * Multi-agent orchestration: plan -> run agents in sequence, passing earlier results forward.
- * A step that needs human approval pauses the whole workflow; the approval decision resumes it.
+ * A step that needs human approval pauses the whole run; the approval decision resumes it.
  */
 @Service
 public class WorkflowService {
@@ -32,15 +32,31 @@ public class WorkflowService {
         this.config = config; this.runner = runner; this.model = model; this.repo = repo; this.om = om;
     }
 
-    /** steps may be null: the planner then decides which agents to use. Pass steps for a fixed pipeline. */
-    public WorkflowResult start(String input, List<Step> steps) {
-        List<Step> plan = steps != null && !steps.isEmpty() ? steps : generatePlan(input);
+    /**
+     * Starts a run (an instance). Source of the steps, in priority order:
+     * a published workflow definition, an explicit fixed pipeline, or the planner.
+     */
+    public WorkflowResult start(String input, List<Step> steps, String definition) {
+        String defName = null;
+        Integer defVersion = null;
+        List<Step> plan;
+        if (definition != null && !definition.isBlank()) {
+            var d = config.publishedWorkflow(definition).orElseThrow(() ->
+                    new ResponseStatusException(HttpStatus.NOT_FOUND, "Workflow not published: " + definition));
+            plan = d.spec().steps().stream()
+                    .map(s -> new Step(s.agent(), s.task().isBlank() ? input : s.task())).toList();
+            defName = definition;
+            defVersion = d.version();
+        } else {
+            plan = steps != null && !steps.isEmpty() ? steps : generatePlan(input);
+        }
         for (Step s : plan) {
             if (config.publishedAgent(s.agent()).isEmpty())
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Agent not published: " + s.agent());
         }
         WorkflowRun w = new WorkflowRun();
         w.input = input; w.plan = json(plan); w.outputs = "[]"; w.status = "RUNNING";
+        w.definitionName = defName; w.definitionVersion = defVersion;
         repo.save(w);
         return advance(w);
     }
@@ -51,7 +67,7 @@ public class WorkflowService {
 
     public List<WorkflowResult> list() { return repo.findTop50ByOrderByIdDesc().stream().map(this::toResult).toList(); }
 
-    /** Called after a reviewer decides. Empty if the approval did not belong to a workflow. */
+    /** Called after a reviewer decides. Empty if the approval did not belong to a run. */
     public Optional<WorkflowResult> onApprovalResult(Long approvalId, RunResult r) {
         Optional<WorkflowRun> found = repo.findByPendingApprovalId(approvalId);
         if (found.isEmpty()) return Optional.empty();
@@ -136,7 +152,8 @@ public class WorkflowService {
     }
 
     private WorkflowResult toResult(WorkflowRun w) {
-        return new WorkflowResult(w.id, w.status, planOf(w), w.stepIndex, outputsOf(w), w.finalOutput, w.pendingApprovalId);
+        return new WorkflowResult(w.id, w.status, planOf(w), w.stepIndex, outputsOf(w), w.finalOutput,
+                w.pendingApprovalId, w.definitionName, w.definitionVersion);
     }
 
     private List<Step> planOf(WorkflowRun w) { return read(w.plan, new TypeReference<List<Step>>() {}); }

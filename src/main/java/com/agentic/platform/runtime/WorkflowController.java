@@ -3,17 +3,20 @@ package com.agentic.platform.runtime;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
+/** Runs (instances). /api/process-runs is an alias of /api/workflows. */
 @RestController
-@RequestMapping("/api/workflows")
+@RequestMapping({"/api/workflows", "/api/process-runs"})
 public class WorkflowController {
-    /** steps optional: omit and the planner picks agents; provide for a fixed pipeline. */
-    public record WorkflowRequest(String input, List<WorkflowResult.Step> steps) {}
+    /** definition = name of a published workflow. Otherwise steps (fixed pipeline) or, if both omitted, the planner. */
+    public record WorkflowRequest(String input, String definition, List<WorkflowResult.Step> steps) {}
 
     private final WorkflowService svc;
     public WorkflowController(WorkflowService svc) { this.svc = svc; }
 
     @PostMapping
-    public WorkflowResult start(@RequestBody WorkflowRequest req) { return svc.start(req.input(), req.steps()); }
+    public WorkflowResult start(@RequestBody WorkflowRequest req) {
+        return svc.start(req.input(), req.steps(), req.definition());
+    }
 
     @GetMapping
     public List<WorkflowResult> list() { return svc.list(); }

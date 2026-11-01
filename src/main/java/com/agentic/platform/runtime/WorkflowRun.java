@@ -3,6 +3,7 @@ package com.agentic.platform.runtime;
 import jakarta.persistence.*;
 import java.time.Instant;
 
+/** One execution (instance) of a process. definitionName/Version are null for ad-hoc runs. */
 @Entity
 public class WorkflowRun {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -13,6 +14,8 @@ public class WorkflowRun {
     public int stepIndex;
     public String status;                                        // RUNNING | PENDING_APPROVAL | COMPLETED | FAILED
     public Long pendingApprovalId;
+    public String definitionName;
+    public Integer definitionVersion;
     @Column(columnDefinition = "TEXT") public String finalOutput;
     public Instant createdAt = Instant.now();
 }

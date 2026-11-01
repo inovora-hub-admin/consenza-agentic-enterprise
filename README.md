@@ -57,3 +57,53 @@ OpenTelemetry tracing, tamper-evident audit storage.
 
 Pass `"steps":[{"agent":"kyc-agent","task":"..."},{"agent":"credit-agent","task":"..."}]` for a fixed pipeline
 instead of planner-chosen agents. POST /api/approvals/{id}/decision now returns `{run, workflow}`.
+
+## Model provider and database profiles
+The database and the model provider are chosen independently.
+
+| SPRING_PROFILES_ACTIVE | Database | Model |
+|---|---|---|
+| (none) | H2 in memory | Anthropic |
+| `postgres` | Postgres | Anthropic |
+| `postgres,openai` | Postgres | OpenAI / OpenAI-compatible |
+| `postgres,mock` | Postgres | scripted offline mock |
+
+Keys: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`. For a local OpenAI-compatible server (Ollama, vLLM) set
+`OPENAI_BASE_URL=http://host:11434/v1` and `OPENAI_MODEL=llama3.1`; no key is needed for non-OpenAI hosts.
+The old `progres` profile is no longer used.
+
+## Workflow definitions vs runs
+- Definition (designed, versioned): `/api/config/workflow/...`, same list / draft / versions / publish endpoints as agents.
+  Spec: `{"description": "...", "steps": [{"agent": "kyc-agent", "task": ""}]}`. Publishing requires every agent to be published.
+- Run (an instance): `POST /api/workflows` (alias `/api/process-runs`) with `{"input": "...", "definition": "onboard-and-credit-review"}`.
+  Runs record the definition name and version. Without `definition`, send `steps` or let the planner choose.
+
+## Tools over MCP (Model Context Protocol)
+Tools are plain `ToolHandler` beans (CBS, database, Kafka adapters). MCP makes them reusable in both directions.
+
+**Expose the platform's tools to other agents/frameworks** - `POST /mcp` (Streamable HTTP, JSON responses, stateless).
+Off by default and fails closed:
+    MCP_SERVER_ENABLED=true
+    MCP_SERVER_TOKEN=<long random secret>      # clients send: Authorization: Bearer <token>
+- Write tools (those with `writes() == true`) are hidden and uncallable unless `platform.mcp.server.allow-writes: true`.
+- Requests carrying an `Origin` header are rejected unless listed in `platform.mcp.server.allowed-origins`.
+- Every call is written to the audit trail under a run id `mcp-<uuid>`, agent `mcp-client`.
+- Calls through `/mcp` do not pass through an agent's autonomy/approval rules. Keep allow-writes off unless the caller is trusted.
+- Put it behind TLS (nginx) before exposing it beyond localhost.
+
+**Use tools served by other MCP servers** (for example a CBS or Kafka adapter written in any language):
+    platform:
+      mcp:
+        servers:
+          - name: cbs
+            url: http://cbs-mcp:8000/mcp
+            token: ${CBS_MCP_TOKEN:}
+            prefix: cbs            # tools become cbs-<toolname>
+Discovered tools join the tool gateway and appear in `GET /api/tools`. A remote tool counts as a write tool unless the
+server marks it `readOnlyHint: true`, so autonomy and approval rules apply. `GET /api/mcp/servers` shows connection status and
+`POST /api/mcp/servers/refresh` reconnects. A server that is down never blocks startup.
+Known limits: no stdio transport, no server-initiated messages, no automatic re-initialize if a remote session expires.
+
+## Tests
+`mvn verify` runs unit tests for the MCP server and client (including a loopback HTTP round trip), the OpenAI message
+translation, and the policy engine. CI now runs them before deploying.
