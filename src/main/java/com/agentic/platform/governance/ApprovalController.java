@@ -4,8 +4,8 @@ import com.agentic.platform.config.AgentSpec;
 import com.agentic.platform.config.ConfigService;
 import com.agentic.platform.runtime.AgentRunner;
 import com.agentic.platform.runtime.RunResult;
+import com.agentic.platform.runtime.WorkflowEngine;
 import com.agentic.platform.runtime.WorkflowResult;
-import com.agentic.platform.runtime.WorkflowService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -24,10 +24,10 @@ public class ApprovalController {
     private final ConfigService config;
     private final AgentRunner runner;
     private final AuditService audit;
-    private final WorkflowService workflows;
+    private final WorkflowEngine workflows;
 
     public ApprovalController(ApprovalRepository repo, ConfigService config, AgentRunner runner,
-                              AuditService audit, WorkflowService workflows) {
+                              AuditService audit, WorkflowEngine workflows) {
         this.repo = repo; this.config = config; this.runner = runner; this.audit = audit; this.workflows = workflows;
     }
 

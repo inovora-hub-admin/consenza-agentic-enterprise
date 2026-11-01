@@ -27,6 +27,17 @@ openai:
 
 platform:
   ui-origin: ${PLATFORM_UI_ORIGIN:https://portal.consenza.africa}
+  workflow:
+    # local    -> in-process engine (default, no extra infra)
+    # temporal -> durable execution on a Temporal cluster; embedded worker in this JVM
+    engine: ${WORKFLOW_ENGINE:local}
+    temporal:
+      target: ${TEMPORAL_TARGET:localhost:7233}
+      namespace: ${TEMPORAL_NAMESPACE:default}
+      task-queue: agentic-workflows
+      worker-enabled: ${TEMPORAL_WORKER_ENABLED:true}
+      step-timeout: 5m
+      sync-wait: 30s
   mcp:
     # Expose this platform's tools to external agents/frameworks at POST /mcp. Off by default.
     # Needs a token. Write tools stay hidden unless allow-writes is true.

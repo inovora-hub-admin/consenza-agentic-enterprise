@@ -19,9 +19,23 @@
   <properties>
     <java.version>21</java.version>
     <resilience4j.version>2.2.0</resilience4j.version>
+    <temporal.version>1.27.0</temporal.version>
   </properties>
 
   <dependencies>
+    <!-- Temporal: durable workflow engine (platform.workflow.engine=temporal) -->
+    <dependency>
+      <groupId>io.temporal</groupId>
+      <artifactId>temporal-sdk</artifactId>
+      <version>${temporal.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.temporal</groupId>
+      <artifactId>temporal-testing</artifactId>
+      <version>${temporal.version}</version>
+      <scope>test</scope>
+    </dependency>
+
     <!-- Web (RestClient support via Spring Framework 6+) -->
     <dependency>
       <groupId>org.springframework.boot</groupId>

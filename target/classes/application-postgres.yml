@@ -6,13 +6,13 @@ server:
 # Database configuration for PostgreSQL (model provider is configured separately, see application.yml)
 spring:
   datasource:
-    #url: jdbc:postgresql://consenza-postgres:5432/agentic
-    #username: postgres
-    #password: ${POSTGRES_PASSWORD:postgres_secure_pass}
-
-    url: jdbc:postgresql://localhost:5432/agentic
+    url: jdbc:postgresql://consenza-postgres:5432/agentic
     username: postgres
-    password: Donthack@01
+    password: ${POSTGRES_PASSWORD:postgres_secure_pass}
+
+    #url: jdbc:postgresql://localhost:5432/agentic
+    #username: postgres
+  #password: Donthack@01
 
 tools:
   kafka:

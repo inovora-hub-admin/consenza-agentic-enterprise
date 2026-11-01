@@ -17,5 +17,7 @@ public class WorkflowRun {
     public String definitionName;
     public Integer definitionVersion;
     @Column(columnDefinition = "TEXT") public String finalOutput;
+    public String engine;                                        // local | temporal
+    public String temporalWorkflowId;                            // "wf-{id}" when engine=temporal
     public Instant createdAt = Instant.now();
 }

@@ -1,0 +1,38 @@
+# Temporal cluster for platform.workflow.engine=temporal.
+# Usage:  docker compose -f docker-compose.temporal.yml up -d
+# Reuses the consenza-postgres instance from your main compose file (auto-setup creates the
+# `temporal` and `temporal_visibility` databases). Point TEMPORAL_TARGET=temporal:7233 in the app.
+services:
+  temporal:
+    image: temporalio/auto-setup:1.25.2
+    container_name: consenza-temporal
+    restart: always
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PWD=${POSTGRES_PASSWORD:-postgres_secure_pass}
+      - POSTGRES_SEEDS=consenza-postgres
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+    ports:
+      - "7233:7233"
+    networks:
+      - consenza-network
+
+  temporal-ui:
+    image: temporalio/ui:2.31.2
+    container_name: consenza-temporal-ui
+    restart: always
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    ports:
+      - "8233:8080"
+    networks:
+      - consenza-network
+
+networks:
+  consenza-network:
+    external: true

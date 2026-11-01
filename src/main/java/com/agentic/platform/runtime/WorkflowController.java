@@ -10,8 +10,8 @@ public class WorkflowController {
     /** definition = name of a published workflow. Otherwise steps (fixed pipeline) or, if both omitted, the planner. */
     public record WorkflowRequest(String input, String definition, List<WorkflowResult.Step> steps) {}
 
-    private final WorkflowService svc;
-    public WorkflowController(WorkflowService svc) { this.svc = svc; }
+    private final WorkflowEngine svc;
+    public WorkflowController(WorkflowEngine svc) { this.svc = svc; }
 
     @PostMapping
     public WorkflowResult start(@RequestBody WorkflowRequest req) {

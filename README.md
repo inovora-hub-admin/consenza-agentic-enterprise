@@ -78,6 +78,28 @@ The old `progres` profile is no longer used.
 - Run (an instance): `POST /api/workflows` (alias `/api/process-runs`) with `{"input": "...", "definition": "onboard-and-credit-review"}`.
   Runs record the definition name and version. Without `definition`, send `steps` or let the planner choose.
 
+## Workflow engine: local or Temporal
+`platform.workflow.engine` (env `WORKFLOW_ENGINE`) selects how runs execute. The REST API, `WorkflowResult` shape and
+the `WorkflowRun` table are identical for both, so the UI does not change.
+
+| | `local` (default) | `temporal` |
+|---|---|---|
+| Execution | In-process loop (`WorkflowService`) | Durable workflow on a Temporal cluster (`TemporalWorkflowEngine`) |
+| Survives restarts mid-run | No | Yes — history is replayed, in-flight step retried |
+| Approval wait | Row in DB, resumed by the HTTP call | Durable `Workflow.await`, no timeout; decision delivered as a Signal |
+| Infra | none | Temporal server + UI (`docker-compose.temporal.yml`) |
+
+Start Temporal next to your existing Postgres (creates the `temporal` and `temporal_visibility` databases):
+```bash
+docker compose -f docker-compose.temporal.yml up -d     # server :7233, UI http://localhost:8233
+WORKFLOW_ENGINE=temporal TEMPORAL_TARGET=localhost:7233 mvn spring-boot:run
+```
+In Docker Compose for the app add `WORKFLOW_ENGINE=temporal` and `TEMPORAL_TARGET=temporal:7233`.
+Each run is workflow id `wf-{id}` on task queue `agentic-workflows`; the worker is embedded in this JVM
+(`TEMPORAL_WORKER_ENABLED=false` on API-only replicas). All LLM/agent/DB work runs in Activities
+(5 min step timeout, 3 attempts); the workflow itself is deterministic. Runs started under one engine must be
+resumed under the same engine (`WorkflowRun.engine`).
+
 ## Tools over MCP (Model Context Protocol)
 Tools are plain `ToolHandler` beans (CBS, database, Kafka adapters). MCP makes them reusable in both directions.
 
