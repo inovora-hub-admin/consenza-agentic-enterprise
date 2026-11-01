@@ -1,0 +1,14 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="AgenticApplication" type="Application" factoryName="Application">
+    <envs>
+      <env name="MCP_SERVER_ENABLED" value="true" />
+      <env name="MCP_SERVER_TOKEN" value="change-me" />
+      <env name="ANTHROPIC_API_KEY" value="sk-ant-... " />
+    </envs>
+    <option name="MAIN_CLASS_NAME" value="com.agentic.platform.AgenticApplication" />
+    <module name="agentic-platform" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

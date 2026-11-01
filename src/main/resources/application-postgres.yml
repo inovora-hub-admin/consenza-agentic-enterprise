@@ -9,3 +9,26 @@ spring:
     url: jdbc:postgresql://consenza-postgres:5432/agentic
     username: postgres
     password: ${POSTGRES_PASSWORD:postgres_secure_pass}
+
+    #url: jdbc:postgresql://localhost:5432/agentic
+    #username: postgres
+  #password: Donthack@01
+
+tools:
+  kafka:
+    allowed-topics:
+      - customer-events
+      - order-events
+    max-payload-bytes: 262144
+    send-timeout-ms: 5000
+
+  external:
+    allowed-hosts: "api.openai.com,localhost"
+    allowed-methods:
+      - GET
+      - POST
+    allowed-path-prefixes:
+      - /v1/
+      - /v2/
+    connect-timeout-ms: 3000
+    read-timeout-ms: 5000

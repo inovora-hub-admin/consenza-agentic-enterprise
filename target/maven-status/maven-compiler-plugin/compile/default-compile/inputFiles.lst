@@ -38,6 +38,9 @@ D:\Consenza\Solutions\consenz-agent-enteprise\consenza-agentic-enteprise\src\mai
 D:\Consenza\Solutions\consenz-agent-enteprise\consenza-agentic-enteprise\src\main\java\com\agentic\platform\runtime\WorkflowResult.java
 D:\Consenza\Solutions\consenz-agent-enteprise\consenza-agentic-enteprise\src\main\java\com\agentic\platform\runtime\WorkflowRun.java
 D:\Consenza\Solutions\consenz-agent-enteprise\consenza-agentic-enteprise\src\main\java\com\agentic\platform\runtime\WorkflowService.java
+D:\Consenza\Solutions\consenz-agent-enteprise\consenza-agentic-enteprise\src\main\java\com\agentic\platform\tools\adapters\DatabaseConnectorAdapter.java
+D:\Consenza\Solutions\consenz-agent-enteprise\consenza-agentic-enteprise\src\main\java\com\agentic\platform\tools\adapters\ExternalApiToolAdapter.java
+D:\Consenza\Solutions\consenz-agent-enteprise\consenza-agentic-enteprise\src\main\java\com\agentic\platform\tools\adapters\KafkaPublishToolAdapter.java
 D:\Consenza\Solutions\consenz-agent-enteprise\consenza-agentic-enteprise\src\main\java\com\agentic\platform\tools\CatalogController.java
 D:\Consenza\Solutions\consenz-agent-enteprise\consenza-agentic-enteprise\src\main\java\com\agentic\platform\tools\CreditCheckTool.java
 D:\Consenza\Solutions\consenz-agent-enteprise\consenza-agentic-enteprise\src\main\java\com\agentic\platform\tools\DocOcrTool.java

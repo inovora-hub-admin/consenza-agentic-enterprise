@@ -41,3 +41,34 @@ platform:
     #     url: http://cbs-mcp:8000/mcp
     #     token: ${CBS_MCP_TOKEN:}
     #     prefix: cbs
+
+# Governed tool adapters (tools/adapters/*). Baseline for every profile; override per profile as needed.
+tools:
+  kafka:
+    allowed-topics: ${TOOLS_KAFKA_ALLOWED_TOPICS:customer-events,order-events}
+    max-payload-bytes: 262144
+    send-timeout-ms: 5000
+  external:
+    allowed-hosts: ${TOOLS_EXTERNAL_ALLOWED_HOSTS:api.partner.com}
+    allowed-methods: GET,POST
+    allowed-path-prefixes: /v1/,/v2/
+    connect-timeout-ms: 3000
+    read-timeout-ms: 5000
+
+resilience4j:
+  retry:
+    instances:
+      toolExternalApi:
+        max-attempts: 3
+        wait-duration: 500ms
+        ignore-exceptions:
+          - jakarta.validation.ValidationException
+  circuitbreaker:
+    instances:
+      toolExternalApi:
+        sliding-window-size: 20
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        ignore-exceptions:
+          - jakarta.validation.ValidationException
+
