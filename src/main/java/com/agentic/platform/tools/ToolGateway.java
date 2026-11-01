@@ -7,7 +7,10 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Single choke point between agents and enterprise systems. Tools come from Spring beans and from MCP servers. */
+/** Single choke point between agents and enterprise systems. Tools come from Spring beans and from MCP servers.
+ *   CONSENZA AFRICA
+ * */
+
 @Component
 public class ToolGateway {
     private final Map<String, ToolHandler> handlers = new ConcurrentHashMap<>();
