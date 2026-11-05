@@ -56,7 +56,8 @@ platform:
 # Governed tool adapters (tools/adapters/*). Baseline for every profile; override per profile as needed.
 tools:
   kafka:
-    allowed-topics: ${TOOLS_KAFKA_ALLOWED_TOPICS:customer-events,order-events}
+    bootstrap-servers: ${KAFKA_SERVERS:consenza-kafka:29092}
+    allowed-topics: ${TOOLS_KAFKA_ALLOWED_TOPICS:customer-events,kyc-events}
     max-payload-bytes: 262144
     send-timeout-ms: 5000
   external:
