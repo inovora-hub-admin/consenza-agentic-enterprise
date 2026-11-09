@@ -129,3 +129,21 @@ Known limits: no stdio transport, no server-initiated messages, no automatic re-
 ## Tests
 `mvn verify` runs unit tests for the MCP server and client (including a loopback HTTP round trip), the OpenAI message
 translation, and the policy engine. CI now runs them before deploying.
+
+## WorkCheck screening
+The `sanctions-check` tool calls WorkCheck rather than a mock watchlist. Set `WORKCHECK_BASE_URL` to the
+service origin (no `/v1` suffix) and `WORKCHECK_API_KEY` through the environment or a secrets manager.
+Use HTTPS in production; HTTP is supported for development services. No endpoint or key is bundled.
+Connection/read timeouts are configured with `tools.workcheck.connect-timeout-ms` (3000) and
+`tools.workcheck.read-timeout-ms` (5000).
+
+- Screen: `{"name":"Paul Makonda","entity_type":"person","country":"Tanzania"}` calls `POST /v1/screen`.
+  Name-only calls still work: `entity_type` defaults to `person`, and `country` is optional.
+  The complete response (matches, details, request/dataset metadata, threshold, timing) is returned, with
+  compatibility fields `match` (whether matches is nonempty) and `source: "workcheck"`. A match is a
+  screening candidate, not an automatic sanctions determination.
+- Profile: `{"profile_id":"5135208"}` calls `GET /v1/profiles/5135208` and returns the complete response,
+  including details and aliases. Do not combine profile lookup with screening fields.
+
+Both calls send `X-Api-Key`. Missing configuration, upstream failures, and malformed responses fail
+the tool call rather than reporting a clear screening result.
