@@ -40,6 +40,7 @@
 /mnt/d/Consenza/Solutions/consenz-agent-enteprise/consenza-agentic-enteprise/src/main/java/com/agentic/platform/runtime/WorkflowResult.java
 /mnt/d/Consenza/Solutions/consenz-agent-enteprise/consenza-agentic-enteprise/src/main/java/com/agentic/platform/runtime/WorkflowRun.java
 /mnt/d/Consenza/Solutions/consenz-agent-enteprise/consenza-agentic-enteprise/src/main/java/com/agentic/platform/runtime/WorkflowService.java
+/mnt/d/Consenza/Solutions/consenz-agent-enteprise/consenza-agentic-enteprise/src/main/java/com/agentic/platform/runtime/WorkflowStatuses.java
 /mnt/d/Consenza/Solutions/consenz-agent-enteprise/consenza-agentic-enteprise/src/main/java/com/agentic/platform/temporal/AgentProcessActivities.java
 /mnt/d/Consenza/Solutions/consenz-agent-enteprise/consenza-agentic-enteprise/src/main/java/com/agentic/platform/temporal/AgentProcessActivitiesImpl.java
 /mnt/d/Consenza/Solutions/consenz-agent-enteprise/consenza-agentic-enteprise/src/main/java/com/agentic/platform/temporal/AgentProcessWorkflow.java

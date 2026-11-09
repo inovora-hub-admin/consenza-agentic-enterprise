@@ -46,7 +46,13 @@ public class ApprovalController {
         ap.status = body.approve() ? "APPROVED" : "REJECTED";
         ap.reviewer = body.reviewer();
         repo.save(ap);
-        audit.log(ap.runId, ap.agentName, "APPROVAL_" + ap.status, ap.toolName + " by " + ap.reviewer);
+
+        audit.log(ap.runId, ap.agentName, "APPROVAL_" + ap.status,
+                "tool=" + ap.toolName +
+                        ", reviewer=" + ap.reviewer +
+                        ", risk=" + (ap.riskLevel == null ? "" : ap.riskLevel) +
+                        ", policy=" + (ap.policyResult == null ? "" : ap.policyResult) +
+                        ", request_id=" + (ap.requestId == null ? "" : ap.requestId));
         RunResult run = runner.resume(ap, agent, body.approve());
         return new DecisionResult(run, workflows.onApprovalResult(id, run).orElse(null));
     }

@@ -28,15 +28,22 @@ public class WorkflowService implements WorkflowEngine {
     private final WorkflowPlanner planner;
 
     public WorkflowService(ConfigService config, AgentRunner runner, WorkflowRepository repo, WorkflowPlanner planner) {
-        this.config = config; this.runner = runner; this.repo = repo; this.planner = planner;
+        this.config = config;
+        this.runner = runner;
+        this.repo = repo;
+        this.planner = planner;
     }
 
     @Override
     public WorkflowResult start(String input, List<Step> steps, String definition) {
         ResolvedPlan rp = planner.resolve(input, steps, definition);
         WorkflowRun w = new WorkflowRun();
-        w.input = input; w.plan = planner.json(rp.plan()); w.outputs = "[]"; w.status = "RUNNING";
-        w.definitionName = rp.definitionName(); w.definitionVersion = rp.definitionVersion();
+        w.input = input;
+        w.plan = planner.json(rp.plan());
+        w.outputs = "[]";
+        w.status = WorkflowStatuses.RUNNING.name();
+        w.definitionName = rp.definitionName();
+        w.definitionVersion = rp.definitionVersion();
         repo.save(w);
         return advance(w);
     }
@@ -47,26 +54,32 @@ public class WorkflowService implements WorkflowEngine {
     }
 
     @Override
-    public List<WorkflowResult> list() { return repo.findTop50ByOrderByIdDesc().stream().map(planner::toResult).toList(); }
+    public List<WorkflowResult> list() {
+        return repo.findTop50ByOrderByIdDesc().stream().map(planner::toResult).toList();
+    }
 
     @Override
     public Optional<WorkflowResult> onApprovalResult(Long approvalId, RunResult r) {
         Optional<WorkflowRun> found = repo.findByPendingApprovalId(approvalId);
         if (found.isEmpty()) return Optional.empty();
         WorkflowRun w = found.get();
-        if ("PENDING_APPROVAL".equals(r.status())) {          // the same step needs another approval
+
+        if (WorkflowStatuses.PENDING_APPROVAL.name().equals(r.status())) {
             w.pendingApprovalId = r.approvalId();
             repo.save(w);
             return Optional.of(planner.toResult(w));
         }
+
         Step step = planner.planOf(w).get(w.stepIndex);
         List<StepOutput> outs = planner.outputsOf(w);
         outs.add(new StepOutput(step.agent(), step.task(), r.runId(), r.status(), r.output()));
         w.outputs = planner.json(outs);
         w.pendingApprovalId = null;
-        if ("FAILED".equals(r.status())) return Optional.of(fail(w, r.output()));
+
+        if (isTerminalFailure(r.status())) return Optional.of(fail(w, r.status(), r.output()));
+
         w.stepIndex++;
-        w.status = "RUNNING";
+        w.status = String.valueOf(WorkflowStatuses.RUNNING);
         repo.save(w);
         return Optional.of(advance(w));
     }
@@ -74,31 +87,46 @@ public class WorkflowService implements WorkflowEngine {
     private WorkflowResult advance(WorkflowRun w) {
         List<Step> plan = planner.planOf(w);
         List<StepOutput> outs = planner.outputsOf(w);
+
         while (w.stepIndex < plan.size()) {
             Step s = plan.get(w.stepIndex);
             AgentSpec agent = config.publishedAgent(s.agent()).orElse(null);
-            if (agent == null) return fail(w, "Agent no longer published: " + s.agent());
+            if (agent == null) {
+                return fail(w, WorkflowStatuses.FAILED_SYSTEM.name(), "Agent no longer published: " + s.agent());
+            }
+
             RunResult r = runner.start(agent, planner.buildPrompt(w.input, s.task(), outs));
-            if ("PENDING_APPROVAL".equals(r.status())) {
-                w.status = "PENDING_APPROVAL";
+
+            if (WorkflowStatuses.PENDING_APPROVAL.name().equals(r.status())) {
+                w.status = String.valueOf(WorkflowStatuses.PENDING_APPROVAL);
                 w.pendingApprovalId = r.approvalId();
                 repo.save(w);
                 return planner.toResult(w);
             }
+
             outs.add(new StepOutput(s.agent(), s.task(), r.runId(), r.status(), r.output()));
             w.outputs = planner.json(outs);
-            if ("FAILED".equals(r.status())) return fail(w, r.output());
+
+            if (isTerminalFailure(r.status())) return fail(w, r.status(), r.output());
+
             w.stepIndex++;
             repo.save(w);
         }
-        w.status = "COMPLETED";
+
+        w.status = String.valueOf(WorkflowStatuses.COMPLETED);
         w.finalOutput = outs.stream().map(o -> o.agent() + ": " + o.output()).collect(Collectors.joining("\n\n"));
         repo.save(w);
         return planner.toResult(w);
     }
 
-    private WorkflowResult fail(WorkflowRun w, String reason) {
-        w.status = "FAILED";
+    private boolean isTerminalFailure(String status) {
+        return WorkflowStatuses.BLOCKED_POLICY.name().equals(status)
+                || WorkflowStatuses.FAILED_SYSTEM.name().equals(status)
+                || "FAILED".equals(status); // backward compatibility for older producers
+    }
+
+    private WorkflowResult fail(WorkflowRun w, String status, String reason) {
+        w.status = String.valueOf(WorkflowStatuses.valueOf(status));
         w.finalOutput = reason;
         repo.save(w);
         return planner.toResult(w);

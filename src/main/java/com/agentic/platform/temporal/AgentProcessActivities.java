@@ -2,6 +2,7 @@ package com.agentic.platform.temporal;
 
 import com.agentic.platform.runtime.RunResult;
 import com.agentic.platform.runtime.WorkflowResult.StepOutput;
+import com.agentic.platform.runtime.WorkflowStatuses;
 import io.temporal.activity.ActivityInterface;
 
 import java.util.List;
@@ -23,5 +24,5 @@ public interface AgentProcessActivities {
 
     void markCompleted(Long runId, List<StepOutput> outputs);
 
-    void markFailed(Long runId, String reason);
+    void markFailed(Long runId, String status, String reason);
 }

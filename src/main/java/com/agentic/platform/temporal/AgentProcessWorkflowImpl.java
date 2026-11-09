@@ -3,6 +3,7 @@ package com.agentic.platform.temporal;
 import com.agentic.platform.runtime.RunResult;
 import com.agentic.platform.runtime.WorkflowResult.Step;
 import com.agentic.platform.runtime.WorkflowResult.StepOutput;
+import com.agentic.platform.runtime.WorkflowStatuses;
 import io.temporal.activity.ActivityOptions;
 import io.temporal.common.RetryOptions;
 import io.temporal.workflow.Workflow;
@@ -13,7 +14,7 @@ import java.util.List;
 
 /**
  * Deterministic orchestration: for each planned step run the agent; if it pauses for approval,
- * park until the reviewer's outcome arrives as a signal (no timeout — approvals may take days),
+ * park until the reviewer's outcome arrives as a signal (no timeout - approvals may take days),
  * then continue. All side effects go through activities.
  */
 public class AgentProcessWorkflowImpl implements AgentProcessWorkflow {
@@ -23,7 +24,7 @@ public class AgentProcessWorkflowImpl implements AgentProcessWorkflow {
     private final AgentProcessActivities acts = Workflow.newActivityStub(
             AgentProcessActivities.class,
             ActivityOptions.newBuilder()
-                    .setStartToCloseTimeout(Duration.ofMinutes(10))      // overridden per-call below for LLM steps
+                    .setStartToCloseTimeout(Duration.ofMinutes(10))
                     .setRetryOptions(RetryOptions.newBuilder()
                             .setInitialInterval(Duration.ofSeconds(2))
                             .setBackoffCoefficient(2.0)
@@ -32,9 +33,9 @@ public class AgentProcessWorkflowImpl implements AgentProcessWorkflow {
                             .build())
                     .build());
 
-    private String status = "RUNNING";
-    private Long waitingOn;                 // approvalId we're parked on
-    private ApprovalOutcome outcome;        // set by signal
+    private String status = WorkflowStatuses.RUNNING.name();
+    private Long waitingOn;
+    private ApprovalOutcome outcome;
 
     @Override
     public String run(StartRequest req) {
@@ -45,41 +46,59 @@ public class AgentProcessWorkflowImpl implements AgentProcessWorkflow {
                 Step s = req.plan().get(i);
                 RunResult r = acts.runStep(req.runId(), s.agent(), s.task(), outs);
 
-                while ("PENDING_APPROVAL".equals(r.status())) {
+                while (WorkflowStatuses.PENDING_APPROVAL.name().equals(r.status())) {
                     waitingOn = r.approvalId();
-                    status = "PENDING_APPROVAL";
+                    status = WorkflowStatuses.PENDING_APPROVAL.name();
                     outcome = null;
                     acts.markPending(req.runId(), waitingOn);
                     Workflow.await(() -> outcome != null && waitingOn.equals(outcome.approvalId()));
-                    r = outcome.result();           // may itself be PENDING_APPROVAL -> loop again
-                    status = "RUNNING";
+                    r = outcome.result();
+                    status = WorkflowStatuses.RUNNING.name();
                 }
                 waitingOn = null;
 
                 StepOutput out = new StepOutput(s.agent(), s.task(), r.runId(), r.status(), r.output());
                 outs.add(out);
-                if ("FAILED".equals(r.status())) {
+
+                if (isTerminalFailure(r.status())) {
                     acts.recordStep(req.runId(), i, out);
-                    acts.markFailed(req.runId(), r.output());
-                    return status = "FAILED";
+                    String failedStatus = normalizeFailureStatus(r.status());
+                    acts.markFailed(req.runId(), String.valueOf(WorkflowStatuses.valueOf(failedStatus)), r.output());
+                    return status = failedStatus;
                 }
+
                 acts.recordStep(req.runId(), i, out);
             }
+
             acts.markCompleted(req.runId(), outs);
-            return status = "COMPLETED";
+            return status = WorkflowStatuses.COMPLETED.name();
         } catch (RuntimeException e) {
-            acts.markFailed(req.runId(), e.getMessage() == null ? e.toString() : e.getMessage());
-            status = "FAILED";
+            String reason = e.getMessage() == null ? e.toString() : e.getMessage();
+            acts.markFailed(req.runId(), String.valueOf(WorkflowStatuses.FAILED_SYSTEM), reason);
+            status = WorkflowStatuses.FAILED_SYSTEM.name();
             throw e;
         }
     }
 
+    private boolean isTerminalFailure(String st) {
+        return WorkflowStatuses.BLOCKED_POLICY.name().equals(st)
+                || WorkflowStatuses.FAILED_SYSTEM.name().equals(st)
+                || "FAILED".equals(st); // backward compatibility
+    }
+
+    private String normalizeFailureStatus(String st) {
+        if (WorkflowStatuses.BLOCKED_POLICY.name().equals(st)) return st;
+        if (WorkflowStatuses.FAILED_SYSTEM.name().equals(st)) return st;
+        return WorkflowStatuses.FAILED_SYSTEM.name();
+    }
+
     @Override
     public void approvalDecided(ApprovalOutcome o) {
-        // Ignore stale/duplicate signals for approvals we're not waiting on.
         if (waitingOn != null && waitingOn.equals(o.approvalId())) outcome = o;
     }
 
     @Override
-    public String status() { return status; }
+    public String status() {
+        return status;
+    }
 }

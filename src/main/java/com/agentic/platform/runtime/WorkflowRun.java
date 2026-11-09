@@ -12,7 +12,8 @@ public class WorkflowRun {
     @Column(columnDefinition = "TEXT") public String plan;       // JSON array of steps
     @Column(columnDefinition = "TEXT") public String outputs;    // JSON array of finished step outputs
     public int stepIndex;
-    public String status;                                        // RUNNING | PENDING_APPROVAL | COMPLETED | FAILED
+
+    public String status;                                        // RUNNING | PENDING_APPROVAL | COMPLETED | BLOCKED_POLICY | FAILED_SYSTEM
     public Long pendingApprovalId;
     public String definitionName;
     public Integer definitionVersion;

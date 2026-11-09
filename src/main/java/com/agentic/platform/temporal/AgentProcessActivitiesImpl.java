@@ -2,12 +2,8 @@ package com.agentic.platform.temporal;
 
 import com.agentic.platform.config.AgentSpec;
 import com.agentic.platform.config.ConfigService;
-import com.agentic.platform.runtime.AgentRunner;
-import com.agentic.platform.runtime.RunResult;
-import com.agentic.platform.runtime.WorkflowPlanner;
-import com.agentic.platform.runtime.WorkflowRepository;
+import com.agentic.platform.runtime.*;
 import com.agentic.platform.runtime.WorkflowResult.StepOutput;
-import com.agentic.platform.runtime.WorkflowRun;
 import io.temporal.failure.ApplicationFailure;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -41,7 +37,7 @@ public class AgentProcessActivitiesImpl implements AgentProcessActivities {
     @Override @Transactional
     public void markPending(Long runId, Long approvalId) {
         WorkflowRun w = load(runId);
-        w.status = "PENDING_APPROVAL";
+        w.status = String.valueOf(WorkflowStatuses.PENDING_APPROVAL);
         w.pendingApprovalId = approvalId;
         repo.save(w);
     }
@@ -49,29 +45,30 @@ public class AgentProcessActivitiesImpl implements AgentProcessActivities {
     @Override @Transactional
     public void recordStep(Long runId, int stepIndex, StepOutput output) {
         WorkflowRun w = load(runId);
-        if (w.stepIndex > stepIndex) return;                 // already recorded (activity retry)
+        if (w.stepIndex > stepIndex) return;
         List<StepOutput> outs = planner.outputsOf(w);
         outs.add(output);
         w.outputs = planner.json(outs);
         w.stepIndex = stepIndex + 1;
         w.pendingApprovalId = null;
-        w.status = "RUNNING";
+        w.status = String.valueOf(WorkflowStatuses.RUNNING);
         repo.save(w);
     }
 
     @Override @Transactional
     public void markCompleted(Long runId, List<StepOutput> outputs) {
         WorkflowRun w = load(runId);
-        w.status = "COMPLETED";
+        w.status = String.valueOf(WorkflowStatuses.COMPLETED);
         w.pendingApprovalId = null;
         w.finalOutput = outputs.stream().map(o -> o.agent() + ": " + o.output()).collect(Collectors.joining("\n\n"));
         repo.save(w);
     }
 
+
     @Override @Transactional
-    public void markFailed(Long runId, String reason) {
+    public void markFailed(Long runId, String status, String reason) {
         WorkflowRun w = load(runId);
-        w.status = "FAILED";
+        w.status = String.valueOf(status);
         w.pendingApprovalId = null;
         w.finalOutput = reason;
         repo.save(w);

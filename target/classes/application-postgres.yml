@@ -14,6 +14,12 @@ spring:
     #username: postgres
   #password: Donthack@01
 
+workcheck:
+  base-url: http://13.140.229.92:8030
+  api-key: dev-key
+  threshold: 75
+
+
 tools:
   kafka:
     allowed-topics:

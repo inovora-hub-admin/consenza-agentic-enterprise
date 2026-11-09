@@ -19,5 +19,12 @@ public class ApprovalEntity {
     public String messages;      // frozen conversation so the run can resume after the decision
     public String status;        // PENDING | APPROVED | REJECTED
     public String reviewer;
+
+    // for policy/evidence visibility.
+    public String riskLevel;     // LOW | MEDIUM | HIGH
+    public String policyResult;  // NEEDS_APPROVAL, etc.
+    public String requestId;     // upstream screening correlation id
+    @Column(columnDefinition = "TEXT")
+    public String evidenceJson;  // compact evidence payload for reviewer/audit
     public Instant createdAt = Instant.now();
 }
