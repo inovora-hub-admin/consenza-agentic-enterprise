@@ -55,6 +55,11 @@ platform:
 
 # Governed tool adapters (tools/adapters/*). Baseline for every profile; override per profile as needed.
 tools:
+  workcheck:
+    base-url: ${WORKCHECK_BASE_URL:}
+    api-key: ${WORKCHECK_API_KEY:}
+    connect-timeout-ms: 3000
+    read-timeout-ms: 5000
   kafka:
     bootstrap-servers: ${KAFKA_SERVERS:consenza-kafka:29092}
     allowed-topics: ${TOOLS_KAFKA_ALLOWED_TOPICS:customer-events,kyc-events}
@@ -83,4 +88,3 @@ resilience4j:
         wait-duration-in-open-state: 30s
         ignore-exceptions:
           - jakarta.validation.ValidationException
-
