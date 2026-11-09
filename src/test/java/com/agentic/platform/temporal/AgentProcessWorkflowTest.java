@@ -69,7 +69,7 @@ class AgentProcessWorkflowTest {
         verify(acts).recordStep(eq(1L), eq(0), argThat(o -> "kyc ok".equals(o.output())));
         verify(acts).recordStep(eq(1L), eq(1), argThat(o -> "score ok".equals(o.output())));
         verify(acts).markCompleted(eq(1L), argThat(l -> l.size() == 2));
-        verify(acts, never()).markFailed(anyLong(), anyString());
+        verify(acts, never()).markFailed(anyLong(), anyString(), anyString());
     }
 
     @Test
@@ -82,7 +82,7 @@ class AgentProcessWorkflowTest {
         String result = wf.run(new StartRequest(2L, "x", List.of(new Step("kyc", "verify"), new Step("credit", "score"))));
 
         assertEquals("FAILED", result);
-        verify(acts).markFailed(2L, "boom");
+        verify(acts).markFailed(2L, "boom", "FAILED");
         verify(acts, never()).runStep(eq(2L), eq("credit"), anyString(), anyList());
     }
 
