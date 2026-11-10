@@ -30,7 +30,7 @@ public class AgentProcessActivitiesImpl implements AgentProcessActivities {
         this.planner = planner;
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override @Transactional
     public RunResult runStep(Long runId, String agentName, String task, List<StepOutput> prior) {
         WorkflowRun w = load(runId);
         rejectIfTerminal(w);
