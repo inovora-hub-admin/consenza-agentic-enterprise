@@ -60,26 +60,21 @@ public class WorkflowService implements WorkflowEngine {
 
     @Override
     public Optional<WorkflowResult> onApprovalResult(Long approvalId, RunResult r) {
-        Optional<WorkflowRun> found = repo.findByPendingApprovalId(approvalId);
-        if (found.isEmpty()) return Optional.empty();
-        WorkflowRun w = found.get();
+        WorkflowRun w = repo.findByPendingApprovalId(approvalId).orElse(null);
+        if (w == null) return Optional.empty();
 
-        if (WorkflowStatuses.PENDING_APPROVAL.name().equals(r.status())) {
-            w.pendingApprovalId = r.approvalId();
-            repo.save(w);
-            return Optional.of(planner.toResult(w));
+        List<StepOutput> outs = planner.outputsOf(w);
+        Step s = planner.planOf(w).get(w.stepIndex);
+        outs.add(new StepOutput(s.agent(), s.task(), r.runId(), r.status(), r.output()));
+        w.outputs = planner.json(outs);
+
+        if (isTerminalFailure(r.status())) {
+            return Optional.of(fail(w, r.status(), r.output()));
         }
 
-        Step step = planner.planOf(w).get(w.stepIndex);
-        List<StepOutput> outs = planner.outputsOf(w);
-        outs.add(new StepOutput(step.agent(), step.task(), r.runId(), r.status(), r.output()));
-        w.outputs = planner.json(outs);
-        w.pendingApprovalId = null;
-
-        if (isTerminalFailure(r.status())) return Optional.of(fail(w, r.status(), r.output()));
-
         w.stepIndex++;
-        w.status = String.valueOf(WorkflowStatuses.RUNNING);
+        w.pendingApprovalId = null;
+        w.status = WorkflowStatuses.RUNNING.name();
         repo.save(w);
         return Optional.of(advance(w));
     }
