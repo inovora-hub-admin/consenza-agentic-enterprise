@@ -118,8 +118,8 @@ public class AgentRunner {
                 }
             }
 
-            // Dynamic risk escalation: sanctions hits become high-risk and require approval.
-            if (decision == Decision.ALLOW && isHighRiskSanctionsHit(name, output)) {
+            // Only escalate on first pass; on resume, honor reviewer decision and do not request approval again.
+            if (decided == null && decision == Decision.ALLOW && isHighRiskSanctionsHit(name, output)) {
                 decision = Decision.NEEDS_APPROVAL;
             }
 
