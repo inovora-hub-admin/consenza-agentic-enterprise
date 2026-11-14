@@ -2,10 +2,7 @@ package com.agentic.platform.governance;
 
 import com.agentic.platform.config.AgentSpec;
 import com.agentic.platform.config.ConfigService;
-import com.agentic.platform.runtime.AgentRunner;
-import com.agentic.platform.runtime.RunResult;
-import com.agentic.platform.runtime.WorkflowEngine;
-import com.agentic.platform.runtime.WorkflowResult;
+import com.agentic.platform.runtime.*;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -41,7 +38,29 @@ public class ApprovalService {
         ApprovalEntity ap = repo.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No such approval"));
         if (!"PENDING".equals(ap.status)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Already decided");
+            // Idempotent behavior for duplicate UI submissions: return current state instead of error.
+            WorkflowResult wf = workflows.onApprovalResult(id, new RunResult(
+                    ap.runId,
+                    "FAILED",
+                    "Approval already decided",
+                    ap.id,
+                    ap.riskLevel,
+                    ap.policyResult,
+                    false,
+                    null,
+                    null
+            )).orElse(null);
+            return new DecisionResponse(new RunResult(
+                    ap.runId,
+                    ap.status,
+                    "Already decided",
+                    ap.id,
+                    ap.riskLevel,
+                    ap.policyResult,
+                    false,
+                    null,
+                    null
+            ), wf);
         }
 
         AgentSpec agent = config.publishedAgent(ap.agentName)
@@ -58,7 +77,23 @@ public class ApprovalService {
                         ", policy=" + (ap.policyResult == null ? "" : ap.policyResult) +
                         ", request_id=" + (ap.requestId == null ? "" : ap.requestId));
 
-        RunResult run = runner.resume(ap, agent, approve);
+        RunResult run;
+        if (!approve) {
+            run = new RunResult(
+                    ap.runId,
+                    WorkflowStatuses.BLOCKED_POLICY.name(),
+                    "Approval rejected by reviewer",
+                    ap.id,
+                    ap.riskLevel,
+                    "DENY",
+                    false,
+                    agent.autonomy(),
+                    null
+            );
+        } else {
+            run = runner.resume(ap, agent, true);
+        }
+
         WorkflowResult wf = workflows.onApprovalResult(id, run).orElse(null);
 
         return new DecisionResponse(run, wf);
