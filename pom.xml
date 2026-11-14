@@ -23,6 +23,18 @@
   </properties>
 
   <dependencies>
+    <!-- SLF4J API -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+
+    <!-- Project Lombok (includes @Slf4j support) -->
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <optional>true</optional>
+    </dependency>
     <!-- Temporal: durable workflow engine (platform.workflow.engine=temporal) -->
     <dependency>
       <groupId>io.temporal</groupId>

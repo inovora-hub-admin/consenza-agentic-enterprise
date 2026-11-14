@@ -63,8 +63,17 @@ public class WorkflowService implements WorkflowEngine {
         WorkflowRun w = repo.findByPendingApprovalId(approvalId).orElse(null);
         if (w == null) return Optional.empty();
 
+        // The approval is now resolved; always clear pending marker first.
+        w.pendingApprovalId = null;
+
+        List<Step> plan = planner.planOf(w);
+        if (w.stepIndex < 0 || w.stepIndex >= plan.size()) {
+            return Optional.of(fail(w, WorkflowStatuses.FAILED_SYSTEM.name(),
+                    "Invalid workflow step index while applying approval result"));
+        }
+
         List<StepOutput> outs = planner.outputsOf(w);
-        Step s = planner.planOf(w).get(w.stepIndex);
+        Step s = plan.get(w.stepIndex);
         outs.add(new StepOutput(s.agent(), s.task(), r.runId(), r.status(), r.output()));
         w.outputs = planner.json(outs);
 
@@ -73,7 +82,6 @@ public class WorkflowService implements WorkflowEngine {
         }
 
         w.stepIndex++;
-        w.pendingApprovalId = null;
         w.status = WorkflowStatuses.RUNNING.name();
         repo.save(w);
         return Optional.of(advance(w));

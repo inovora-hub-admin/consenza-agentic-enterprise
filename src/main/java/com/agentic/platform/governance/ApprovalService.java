@@ -7,11 +7,13 @@ import com.agentic.platform.runtime.RunResult;
 import com.agentic.platform.runtime.WorkflowEngine;
 import com.agentic.platform.runtime.WorkflowResult;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-
+@Slf4j
 @Service
+
 public class ApprovalService {
 
     public record DecisionResponse(RunResult run, WorkflowResult workflow) {}

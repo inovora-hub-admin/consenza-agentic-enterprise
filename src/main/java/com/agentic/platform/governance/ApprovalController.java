@@ -1,10 +1,11 @@
 package com.agentic.platform.governance;
 import com.agentic.platform.runtime.RunResult;
 import com.agentic.platform.runtime.WorkflowResult;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
+@Slf4j
 @RestController@RequestMapping("/api/approvals")
 public class ApprovalController {
     public record DecisionRequest(boolean approve, String reviewer) {
